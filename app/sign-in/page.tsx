@@ -1,206 +1,126 @@
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { authClient } from "@/lib/auth-client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { FaEnvelope, FaLock, FaArrowRight, FaGoogle } from 'react-icons/fa';
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { FaSignInAlt, FaArrowLeft } from "react-icons/fa";
 
 export default function SignInPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("STUDENT");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    rememberMe: false
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    
-    if (!formData.email || !formData.password) {
-      setError('Please enter both email and password');
-      return;
-    }
+    setLoading(true);
+    setError("");
 
-    setIsLoading(true);
-    
     try {
-      const { data, error } = await authClient.signIn.email({
-        email: formData.email,
-        password: formData.password,
-        callbackURL: "/dashboard",
-        rememberMe: formData.rememberMe
-      }, {
-        onRequest: () => {
-          setIsLoading(true);
-        },
-        onSuccess: () => {
-          router.push('/dashboard');
-        },
-        onError: (ctx) => {
-          setError(ctx.error?.message || 'Invalid email or password');
-          setIsLoading(false);
-        },
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, role }),
       });
-    } catch (err) {
-      setError('An unexpected error occurred');
-      setIsLoading(false);
-    }
-  };
 
-  const fadeIn = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
+      const data = await res.json();
+
+      if (res.ok) {
+        const { role } = data.user;
+        if (role === "ADMIN") router.push("/admin");
+        else if (role === "PLACEMENT_OFFICER") router.push("/placement-officers");
+        else router.push("/students");
+      } else {
+        setError(data.error || "Invalid credentials");
+      }
+    } catch (err) {
+      setError("Failed to sign in. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
       <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={fadeIn}
-        transition={{ duration: 0.5 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
-        <Card className="shadow-lg border-0">
+        <Link href="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-blue-600 mb-6 transition-colors">
+          <FaArrowLeft /> Back to Home
+        </Link>
+        
+        <Card className="shadow-xl border-slate-200">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center text-gray-900">
-              Welcome back
-            </CardTitle>
-            <CardDescription className="text-center text-gray-600">
-              Sign in to your account to continue
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-blue-600 rounded-xl">
+                <FaSignInAlt className="h-6 w-6 text-white" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl text-center font-bold">Sign In</CardTitle>
+            <CardDescription className="text-center">
+              Welcome back! Please enter your details.
             </CardDescription>
           </CardHeader>
-          
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               {error && (
-                <div className="p-3 bg-red-50 text-red-600 text-sm rounded-md">
+                <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm">
                   {error}
                 </div>
               )}
-              
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700" htmlFor="email">
-                  Email
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaEnvelope className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="name@example.com"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="pl-10 text-black"
-                  />
-                </div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="name@example.com"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
-              
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="password">
-                    Password
-                  </label>
-                  <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
-                    Forgot password?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaLock className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="pl-10 text-black"
-                  />
-                </div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
               </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="rememberMe"
-                    name="rememberMe"
-                    type="checkbox"
-                    checked={formData.rememberMe}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
-                    Remember me
-                  </label>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="role">Sign In As</Label>
+                <Select value={role} onValueChange={setRole}>
+                  <SelectTrigger id="role">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="STUDENT">Student</SelectItem>
+                    <SelectItem value="PLACEMENT_OFFICER">Placement Officer</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              
-              <Button 
-                type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Signing in...' : (
-                  <>
-                    Sign In
-                    <FaArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
-              
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Or continue with</span>
-                </div>
-              </div>
-              
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full flex items-center justify-center"
-                onClick={() => {
-                  // Handle Google sign in
-                  authClient.signIn.google({
-                    callbackURL: '/dashboard'
-                  });
-                }}
-              >
-                <FaGoogle className="h-4 w-4 mr-2 text-red-500" />
-                Sign in with Google
-              </Button>
             </CardContent>
-            
             <CardFooter className="flex flex-col space-y-4">
-              <p className="text-sm text-center text-gray-600">
-                Don't have an account?{' '}
-                <Link href="/sign-up" className="text-blue-600 hover:text-blue-800 font-medium">
-                  Sign up
+              <Button className="w-full h-11" type="submit" disabled={loading}>
+                {loading ? "Signing in..." : "Sign In"}
+              </Button>
+              <p className="text-center text-sm text-slate-600">
+                Don't have an account?{" "}
+                <Link href="/sign-up" className="text-blue-600 hover:underline font-medium">
+                  Sign Up
                 </Link>
               </p>
             </CardFooter>

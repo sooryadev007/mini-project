@@ -5,8 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -19,13 +18,127 @@ model User {
   email         String
   emailVerified Boolean   @default(false)
   image         String?
+  role          UserRole  @default(STUDENT)
+  password      String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  studentProfile Student?
+  placementOfficer PlacementOfficer?
+  adminProfile   Admin?
 
   @@unique([email])
   @@map("user")
+}
+
+enum UserRole {
+  STUDENT
+  PLACEMENT_OFFICER
+  ADMIN
+}
+
+model Student {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rollNumber  String   @unique
+  department  String
+  year        Int
+  cgpa        Float
+  resume      String?
+  skills      String[]
+  applications Application[]
+
+  @@map("student")
+}
+
+model PlacementOfficer {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId  String   @unique
+  department  String
+  companies   Company[]
+
+  @@map("placement_officer")
+}
+
+model Admin {
+  id       String   @id @default(cuid())
+  userId   String   @unique
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admin")
+}
+
+model Company {
+  id                String   @id @default(cuid())
+  name              String
+  description       String?
+  website           String?
+  industry          String?
+  location          String?
+  logo              String?
+  placementOfficerId String
+  placementOfficer  PlacementOfficer @relation(fields: [placementOfficerId], references: [id], onDelete: Cascade)
+  jobs              Job[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("company")
+}
+
+model Job {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  requirements String[]
+  salary      String?
+  location    String?
+  jobType     JobType  @default(FULL_TIME)
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  postedBy    String
+  deadline    DateTime
+  isActive    Boolean  @default(true)
+  minCgpa     Float    @default(0.0)
+  applications Application[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("job")
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  INTERNSHIP
+  CONTRACT
+}
+
+model Application {
+  id         String           @id @default(cuid())
+  studentId  String
+  student    Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  jobId      String
+  job        Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status     ApplicationStatus @default(PENDING)
+  resume     String?          // Link to the CV for this specific application
+  appliedAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([studentId, jobId])
+  @@map("application")
+}
+
+enum ApplicationStatus {
+  PENDING
+  UNDER_REVIEW
+  SHORTLISTED
+  REJECTED
+  ACCEPTED
+  PLACED
 }
 
 model Session {

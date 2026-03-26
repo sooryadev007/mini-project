@@ -1,186 +1,222 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import Link from "next/link";
-import { FaBuilding, FaUserGraduate, FaUserTie, FaSignInAlt, FaUserPlus } from "react-icons/fa";
-
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
-};
+import { useRouter } from "next/navigation";
+import {
+  FaUserGraduate,
+  FaUserTie,
+  FaUserShield,
+  FaEnvelope,
+  FaLock,
+  FaEye,
+  FaEyeSlash,
+  FaArrowRight,
+  FaInfoCircle,
+  FaGraduationCap,
+  FaGlobe,
+  FaQuestionCircle
+} from "react-icons/fa";
+import { toast } from "react-hot-toast";
 
 export default function Home() {
+  const [role, setRole] = useState("STUDENT");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, role }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Login successful!");
+        if (role === "ADMIN") router.push("/admin");
+        else if (role === "PLACEMENT_OFFICER") router.push("/placement-officers");
+        else router.push("/students");
+      } else {
+        toast.error(data.error || "Login failed");
+      }
+    } catch (error) {
+      toast.error("Something went wrong");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Navigation */}
-      <header className="fixed w-full bg-white/80 backdrop-blur-sm z-50 shadow-sm">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center space-x-3"
-          >
-            <div className="p-2 bg-blue-600 rounded-lg">
-              <FaBuilding className="h-6 w-6 text-white" />
+    <div className="min-h-screen relative flex items-center justify-center overflow-hidden font-sans">
+      {/* Background with subtle overlay */}
+      <div
+        className="absolute inset-0 z-0 bg-cover bg-center brightness-75 transition-all duration-1000"
+        style={{ backgroundImage: "url('/college.jpeg')" }}
+      />
+      <div className="absolute inset-0 z-0 bg-slate-900/40" />
+
+      <div className="container mx-auto px-6 relative z-10 flex flex-col lg:flex-row items-center justify-between gap-12">
+        {/* Left Section: Hero Text */}
+        <motion.div
+          className="text-white max-w-2xl"
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <h1 className="text-6xl md:text-7xl font-bold leading-tight mb-8">
+            Empowering <br />
+            Your <span className="text-blue-300">Career</span> <br />
+            <span className="text-blue-400">Odyssey.</span>
+          </h1>
+          <p className="text-xl text-slate-200 mb-10 leading-relaxed max-w-lg">
+            The EduPlacement Portal serves as the bridge between academic excellence and global professional opportunities.
+          </p>
+
+          <div className="flex items-center space-x-4 bg-white/10 backdrop-blur-md rounded-2xl p-4 w-fit border border-white/20 shadow-xl">
+            <div className="bg-blue-500/20 p-3 rounded-xl">
+              <FaGraduationCap className="text-2xl text-blue-400" />
             </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
-              Placement Portal
-            </span>
-          </motion.div>
-
-          <nav className="hidden md:flex items-center space-x-1">
-            {['Home', 'About', 'Contact', 'Help'].map((item, index) => (
-              <motion.a
-                key={item}
-                href="#"
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                {item}
-              </motion.a>
-            ))}
-          </nav>
-
-          <motion.div 
-            className="flex items-center space-x-3"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
-            <Button variant="ghost" asChild>
-              <Link href="/sign-in" className="flex items-center gap-2">
-                <FaSignInAlt /> Sign In
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link href="/sign-up" className="flex items-center gap-2">
-                <FaUserPlus /> Sign Up
-              </Link>
-            </Button>
-          </motion.div>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <main className="pt-32 pb-20 px-4">
-        <div className="container mx-auto text-center">
-          <motion.h1 
-            className="text-5xl md:text-6xl font-bold text-slate-800 mb-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            Welcome to the <span className="bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">Placement Portal</span>
-          </motion.h1>
-          
-          <motion.p 
-            className="text-xl text-slate-600 max-w-3xl mx-auto mb-12"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            Streamlining the recruitment process for students, placement officers, and companies. 
-            Connect, apply, and manage placements seamlessly.
-          </motion.p>
-
-          <motion.div 
-            className="flex flex-wrap justify-center gap-4 mb-20"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <Button size="lg" asChild>
-              <Link href="/sign-up" className="text-lg px-8 py-6">
-                Get Started
-              </Link>
-            </Button>
-            <Button variant="outline" size="lg" className="text-lg px-8 py-6">
-              Learn More
-            </Button>
-          </motion.div>
-
-          {/* Role-based Cards */}
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {[
-              {
-                icon: <FaUserGraduate className="h-12 w-12 mb-4 text-blue-600" />,
-                title: "For Students",
-                description: "Find and apply to job opportunities, track applications, and get placement assistance.",
-                link: "/sign-up/student"
-              },
-              {
-                icon: <FaUserTie className="h-12 w-12 mb-4 text-blue-600" />,
-                title: "For Placement Officers",
-                description: "Manage student records, coordinate with companies, and track placement statistics.",
-                link: "/sign-up/officer"
-              },
-              {
-                icon: <FaBuilding className="h-12 w-12 mb-4 text-blue-600" />,
-                title: "For Admin",
-                description: "Oversee the entire placement process, manage users, and generate reports.",
-                link: "/sign-up/admin"
-              }
-            ].map((feature, index) => (
-              <motion.div
-                key={feature.title}
-                variants={fadeIn}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                transition={{ delay: 0.2 * index }}
-              >
-                <Card className="h-full hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex justify-center">
-                      {feature.icon}
-                    </div>
-                    <CardTitle className="text-center">{feature.title}</CardTitle>
-                    <CardDescription className="text-center">
-                      {feature.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardFooter className="justify-center">
-                    <Button variant="outline" asChild>
-                      <Link href={feature.link}>Get Started</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </motion.div>
-            ))}
+            <div>
+              <p className="text-xs text-slate-300 uppercase tracking-widest font-semibold">Academic Session</p>
+              <p className="text-lg font-bold text-white tracking-wide">2026-2027</p>
+            </div>
           </div>
-        </div>
-      </main>
+        </motion.div>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-6 md:mb-0">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-600 rounded-lg">
-                  <FaBuilding className="h-6 w-6 text-white" />
+        {/* Right Section: Login Card */}
+        <motion.div
+          className="w-full max-w-[480px]"
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+        >
+          <div className="bg-[#f0f2f5] rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/50">
+            <div className="p-10">
+              {/* Header Icon & Title */}
+              <div className="flex flex-col items-center mb-10">
+                <div className="bg-[#0f2a4a] p-4 rounded-2xl shadow-lg mb-4">
+                  <FaUserTie className="text-3xl text-white" />
                 </div>
-                <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
-                  Placement Portal
-                </span>
+                <h2 className="text-3xl font-bold text-[#0f2a4a]">EduPlacement</h2>
+                <p className="text-slate-500 font-medium mt-1">Institutional Career Services</p>
               </div>
-              <p className="mt-2 text-slate-600">Empowering your career journey</p>
+
+              {/* Role Selection Tabs */}
+              <div className="bg-slate-200/50 p-1 rounded-2xl flex mb-10 shadow-inner">
+                {[
+                  { id: "STUDENT", label: "Student", icon: FaUserGraduate },
+                  { id: "PLACEMENT_OFFICER", label: "Placement Officer", icon: FaUserTie },
+                  { id: "ADMIN", label: "Admin", icon: FaUserShield }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setRole(item.id)}
+                    className={`flex-1 flex items-center justify-center space-x-2 py-3 px-2 rounded-xl text-sm font-bold transition-all duration-300 ${role === item.id
+                      ? "bg-white text-[#0f2a4a] shadow-lg scale-100"
+                      : "text-slate-500 hover:text-[#0f2a4a] hover:bg-white/40 scale-[0.98]"
+                      }`}
+                  >
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleLogin} className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.15em] mb-3 ml-1">
+                    University Email
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <FaEnvelope className="text-slate-400 group-focus-within:text-[#0f2a4a] transition-colors" />
+                    </div>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="block w-full pl-11 pr-4 py-4 bg-white/70 border-none rounded-2xl text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-[#0f2a4a] focus:bg-white transition-all shadow-sm"
+                      placeholder="student@university.edu"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-3 ml-1">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.15em]">
+                      Password
+                    </label>
+                  </div>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <FaLock className="text-slate-400 group-focus-within:text-[#0f2a4a] transition-colors" />
+                    </div>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="block w-full pl-11 pr-12 py-4 bg-white/70 border-none rounded-2xl text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-[#0f2a4a] focus:bg-white transition-all shadow-sm"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-[#0f2a4a]"
+                    >
+                      {showPassword ? <FaEyeSlash /> : <FaEye />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-center space-x-3 py-5 bg-[#0f2a4a] text-white rounded-2xl font-bold text-lg hover:bg-[#1a3a5a] transition-all active:scale-[0.98] shadow-xl disabled:opacity-70 group"
+                >
+                  <span>{isLoading ? "Verifying..." : "Access Portal"}</span>
+                  {!isLoading && <FaArrowRight className="text-sm transition-transform group-hover:translate-x-1" />}
+                </button>
+              </form>
+
+
+
+              {/* Additional Link for other roles */}
+              {(role === "ADMIN" || role === "PLACEMENT_OFFICER") && (
+                <div className="mt-6 text-center">
+
+
+                </div>
+              )}
             </div>
-            <div className="flex space-x-6">
-              <a href="#" className="text-slate-600 hover:text-blue-600 transition-colors">Privacy Policy</a>
-              <a href="#" className="text-slate-600 hover:text-blue-600 transition-colors">Terms of Service</a>
-              <a href="#" className="text-slate-600 hover:text-blue-600 transition-colors">Contact Us</a>
+
+            {/* Footer */}
+            <div className="bg-slate-200/30 px-10 py-5 flex justify-between items-center border-t border-slate-200/60">
+              <button className="flex items-center space-x-2 text-slate-500 hover:text-[#0f2a4a] transition-colors group">
+              </button>
             </div>
           </div>
-          <div className="border-t border-slate-200 mt-8 pt-8 text-center text-slate-500 text-sm">
-            © {new Date().getFullYear()} Placement Portal. All rights reserved.
-          </div>
-        </div>
-      </footer>
+        </motion.div>
+      </div>
+
+      {/* Floating Language Icon */}
+      <div className="fixed bottom-8 right-8 z-50">
+        <button className="bg-white p-4 rounded-2xl shadow-2xl text-[#0f2a4a] hover:scale-110 active:scale-95 transition-all">
+          <FaGlobe className="text-xl" />
+        </button>
+      </div>
+
+      {/* Decorative Circles */}
+      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] bg-slate-500/10 rounded-full blur-[100px] pointer-events-none" />
     </div>
   );
 }

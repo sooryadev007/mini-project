@@ -1,14 +1,11 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient } from '@/generated/prisma/client'
 import "dotenv/config";
+import { getPrisma } from "@/lib/prisma";
 // If your Prisma file is located elsewhere, you can change the path
 //import { PrismaClient } from "@/generated/prisma/client";
 
-const connectionString = `${process.env.DATABASE_URL}`
-const adapter = new PrismaPg({ connectionString })
-const prisma = new PrismaClient({ adapter })
+const prisma = getPrisma();
 
 
 export const auth = betterAuth({
