@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { FaArrowLeft, FaUsers, FaPlus, FaUpload, FaBriefcase, FaSignOutAlt, FaTrash, FaDownload, FaChevronUp, FaChevronDown, FaGripVertical, FaCopy } from "react-icons/fa";
+import { FaArrowLeft, FaUsers, FaPlus, FaUpload, FaBriefcase, FaSignOutAlt, FaTrash, FaDownload, FaChevronUp, FaChevronDown, FaGripVertical, FaCopy, FaEdit } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
@@ -26,6 +26,9 @@ export default function PlacementOfficerPage() {
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
   const [isAddCompanyOpen, setIsAddCompanyOpen] = useState(false);
   const [isViewApplicantsOpen, setIsViewApplicantsOpen] = useState(false);
+  const [isEditStudentOpen, setIsEditStudentOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ name: "", email: "", rollNumber: "", department: "", year: "", cgpa: "" });
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [applicants, setApplicants] = useState<any[]>([]);
   const [loadingApplicants, setLoadingApplicants] = useState(false);
@@ -193,6 +196,48 @@ export default function PlacementOfficerPage() {
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/sign-in");
+  };
+
+  const handleEditStudent = (student: any) => {
+    setEditingStudent(student);
+    setEditForm({
+      name: student.name || "",
+      email: student.email || "",
+      rollNumber: student.studentProfile?.rollNumber || "",
+      department: student.studentProfile?.department || "",
+      year: String(student.studentProfile?.year || 1),
+      cgpa: String(student.studentProfile?.cgpa || 0),
+    });
+    setIsEditStudentOpen(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+    const res = await fetch(`/api/officers/students/${editingStudent.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editForm),
+    });
+    if (res.ok) {
+      setIsEditStudentOpen(false);
+      setEditingStudent(null);
+      fetchData();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Failed to update student");
+    }
+  };
+
+  const handleDeleteStudent = async (studentId: string, studentName: string) => {
+    if (!confirm(`Are you sure you want to remove "${studentName}" from the system? This cannot be undone.`)) return;
+    const res = await fetch(`/api/officers/students/${studentId}`, { method: "DELETE" });
+    if (res.ok) {
+      fetchData();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Failed to delete student");
+    }
   };
 
   const handleViewApplicants = async (job: any) => {
@@ -374,22 +419,75 @@ export default function PlacementOfficerPage() {
                           <th className="px-6 py-4">Email</th>
                           <th className="px-6 py-4">Dept</th>
                           <th className="px-6 py-4">CGPA</th>
+                          <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
                         {students.map(s => (
-                          <tr key={s.id}>
+                          <tr key={s.id} className="hover:bg-slate-50 transition-colors">
                             <td className="px-6 py-4 font-semibold">{s.name}</td>
                             <td className="px-6 py-4">{s.studentProfile?.rollNumber}</td>
                             <td className="px-6 py-4">{s.email}</td>
                             <td className="px-6 py-4">{s.studentProfile?.department}</td>
                             <td className="px-6 py-4 text-emerald-600 font-bold">{s.studentProfile?.cgpa}</td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleEditStudent(s)}>
+                                  <FaEdit className="mr-1" /> Edit
+                                </Button>
+                                <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDeleteStudent(s.id, s.name)}>
+                                  <FaTrash className="mr-1" /> Remove
+                                </Button>
+                              </div>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 </CardContent>
+
+                {/* Edit Student Dialog */}
+                <Dialog open={isEditStudentOpen} onOpenChange={setIsEditStudentOpen}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Edit Student</DialogTitle>
+                      <DialogDescription>Modify the student&apos;s details below.</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSaveEdit} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2 col-span-2">
+                          <Label>Full Name</Label>
+                          <Input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Email</Label>
+                          <Input type="email" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Roll Number</Label>
+                          <Input value={editForm.rollNumber} onChange={e => setEditForm({...editForm, rollNumber: e.target.value})} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Department</Label>
+                          <Input value={editForm.department} onChange={e => setEditForm({...editForm, department: e.target.value})} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Year</Label>
+                          <Input type="number" value={editForm.year} onChange={e => setEditForm({...editForm, year: e.target.value})} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>CGPA</Label>
+                          <Input type="number" step="0.01" value={editForm.cgpa} onChange={e => setEditForm({...editForm, cgpa: e.target.value})} required />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setIsEditStudentOpen(false)}>Cancel</Button>
+                        <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">Save Changes</Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </Card>
             </TabsContent>
 
