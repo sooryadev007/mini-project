@@ -3,9 +3,9 @@ import { getPrisma } from "@/lib/prisma";
 
 export async function GET(
   _req: Request,
-  { params }: { params: { studentId: string } },
+  { params }: { params: Promise<{ studentId: string }> },
 ) {
-  const { studentId } = params;
+  const { studentId } = await params;
 
   // Demo mode
   if (studentId === "demo") {
