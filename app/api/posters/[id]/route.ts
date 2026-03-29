@@ -3,11 +3,11 @@ import { getPrisma } from "@/lib/prisma";
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const prisma = getPrisma();
   try {
-    const { id } = params;
+    const { id } = await params;
     await prisma.poster.delete({
       where: { id },
     });
