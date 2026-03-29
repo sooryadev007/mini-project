@@ -119,15 +119,15 @@ export default function AdminPage() {
 
       <main className="container mx-auto px-4 py-10">
         <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-10">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4 md:mb-10">
             <div>
-              <h1 className="text-4xl font-bold text-slate-900">Placement Coordination</h1>
-              <p className="mt-2 text-slate-600 text-lg">Manage faculty roles and portal permissions.</p>
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Placement Coordination</h1>
+              <p className="mt-2 text-slate-600 text-base md:text-lg">Manage faculty roles and portal permissions.</p>
             </div>
             
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
               <DialogTrigger asChild>
-                <Button size="lg" className="bg-purple-600 hover:bg-purple-700 shadow-lg">
+                <Button size="lg" className="bg-purple-600 hover:bg-purple-700 shadow-lg w-full md:w-auto">
                   <FaPlus className="mr-2" /> Add Placement Officer
                 </Button>
               </DialogTrigger>

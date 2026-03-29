@@ -70,12 +70,12 @@ export default function Home() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <h1 className="text-6xl md:text-7xl font-bold leading-tight mb-8">
+          <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6 md:mb-8 mt-12 md:mt-0">
             Empowering <br />
             Your <span className="text-blue-300">Career</span> <br />
             <span className="text-blue-400">Odyssey.</span>
           </h1>
-          <p className="text-xl text-slate-200 mb-10 leading-relaxed max-w-lg">
+          <p className="text-lg md:text-xl text-slate-200 mb-10 leading-relaxed max-w-lg">
             The EduPlacement Portal serves as the bridge between academic excellence and global professional opportunities.
           </p>
 
@@ -118,7 +118,7 @@ export default function Home() {
                   <button
                     key={item.id}
                     onClick={() => setRole(item.id)}
-                    className={`flex-1 flex items-center justify-center space-x-2 py-3 px-2 rounded-xl text-sm font-bold transition-all duration-300 ${role === item.id
+                    className={`flex-1 flex items-center justify-center space-x-2 py-3 px-1 sm:px-2 rounded-xl text-[10px] sm:text-sm font-bold transition-all duration-300 ${role === item.id
                       ? "bg-white text-[#0f2a4a] shadow-lg scale-100"
                       : "text-slate-500 hover:text-[#0f2a4a] hover:bg-white/40 scale-[0.98]"
                       }`}

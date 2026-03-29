@@ -136,13 +136,13 @@ export default function StudentPage() {
 
       <main className="container mx-auto px-4 py-10">
         <div className="max-w-6xl mx-auto">
-          <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="mb-8 md:mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <h1 className="text-4xl font-bold">Welcome, {user?.name || "Student"}</h1>
-              <p className="text-slate-600 mt-2 text-lg">Browse placement drives and track your career journey.</p>
+              <h1 className="text-3xl md:text-4xl font-bold">Welcome, {user?.name || "Student"}</h1>
+              <p className="text-slate-600 mt-2 text-base md:text-lg">Browse placement drives and track your career journey.</p>
             </div>
             {user?.studentProfile && (
-              <div className="bg-white p-4 rounded-2xl shadow-md border border-slate-100 flex gap-8 items-center">
+              <div className="bg-white p-4 rounded-2xl shadow-md border border-slate-100 flex justify-around md:justify-start gap-8 items-center w-full md:w-auto">
                 <div>
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">CGPA</p>
                   <p className="text-2xl font-bold text-blue-600">{user.studentProfile.cgpa}</p>

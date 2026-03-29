@@ -218,14 +218,14 @@ export default function PlacementOfficerPage() {
       <main className="container mx-auto px-4 py-10">
         <div className="max-w-6xl mx-auto">
           <Tabs defaultValue="students" className="space-y-6">
-            <div className="flex justify-between items-end">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
               <div>
-                <h1 className="text-4xl font-bold">Placement Officer Dashboard</h1>
-                <p className="text-slate-600 mt-2 text-lg">Manage student records and plan upcoming drives.</p>
+                <h1 className="text-3xl md:text-4xl font-bold">Placement Officer Dashboard</h1>
+                <p className="text-slate-600 mt-2 text-base md:text-lg">Manage student records and plan upcoming drives.</p>
               </div>
-              <TabsList className="bg-white/50 backdrop-blur-md p-1">
-                <TabsTrigger value="students" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white px-6">Students</TabsTrigger>
-                <TabsTrigger value="drives" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white px-6">Drives</TabsTrigger>
+              <TabsList className="bg-white/50 backdrop-blur-md p-1 self-start md:self-auto w-full md:w-auto flex">
+                <TabsTrigger value="students" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white flex-1 md:flex-none px-4 md:px-6">Students</TabsTrigger>
+                <TabsTrigger value="drives" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white flex-1 md:flex-none px-4 md:px-6">Drives</TabsTrigger>
               </TabsList>
             </div>
 
@@ -237,8 +237,8 @@ export default function PlacementOfficerPage() {
                     <CardDescription>Individual record entry</CardDescription>
                   </CardHeader>
                   <form onSubmit={handleAddStudent}>
-                    <CardContent className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2 col-span-2">
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2 col-span-1 md:col-span-2">
                         <Label>Full Name</Label>
                         <Input value={newStudent.name} onChange={e => setNewStudent({...newStudent, name: e.target.value})} required />
                       </div>
