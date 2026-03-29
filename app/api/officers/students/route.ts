@@ -64,7 +64,7 @@ export async function POST(req: Request) {
           return null;
         }
       }));
-      return NextResponse.json({ message: "Bulk upload completed", count: results.filter(r => r !== null).length });
+      return NextResponse.json({ message: "Bulk upload completed", count: results.filter((r: any) => r !== null).length });
     } else {
       const { name, email, password, rollNumber, department, year, cgpa } = body;
       const normalizedEmail = email.toLowerCase().trim();
