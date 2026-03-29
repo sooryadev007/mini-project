@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { title, description, requirements, salary, location, jobType, companyId, deadline, minCgpa } = await req.json();
+    const { title, description, requirements, salary, location, jobType, companyId, deadline, minCgpa, customForm, probation, trainingPeriod, jobOpportunity, jobDescription } = await req.json();
 
     if (!title) return NextResponse.json({ error: "Title is required" }, { status: 400 });
     if (!description) return NextResponse.json({ error: "Description is required" }, { status: 400 });
@@ -56,6 +56,11 @@ export async function POST(req: Request) {
         postedBy: session.userId as string,
         deadline: new Date(deadline),
         minCgpa: parseFloat(minCgpa) || 0.0,
+        probation: probation || null,
+        trainingPeriod: trainingPeriod || null,
+        jobOpportunity: jobOpportunity || null,
+        jobDescription: jobDescription || null,
+        customForm: customForm || null,
       },
     });
 

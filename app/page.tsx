@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   FaUserGraduate,
   FaUserTie,
@@ -15,9 +16,71 @@ import {
   FaInfoCircle,
   FaGraduationCap,
   FaGlobe,
-  FaQuestionCircle
+  FaQuestionCircle,
+  FaBullhorn
 } from "react-icons/fa";
 import { toast } from "react-hot-toast";
+
+function PostersGrid() {
+  const [posters, setPosters] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/posters")
+      .then(res => res.json())
+      .then(data => {
+        setPosters(data.posters || []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="aspect-[16/9] rounded-3xl bg-white/5 animate-pulse border border-white/10" />
+      ))}
+    </div>
+  );
+
+  if (posters.length === 0) return (
+    <div className="p-12 text-center bg-white/5 backdrop-blur-md rounded-[2.5rem] border border-white/10">
+      <FaBullhorn className="mx-auto text-4xl text-blue-400/50 mb-4" />
+      <p className="text-slate-400 font-medium tracking-wide">Stay tuned for upcoming placement drives and events.</p>
+    </div>
+  );
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {posters.map((p, idx) => (
+        <motion.div
+           key={p.id}
+           initial={{ opacity: 0, y: 20 }}
+           whileInView={{ opacity: 1, y: 0 }}
+           transition={{ delay: idx * 0.1 }}
+           viewport={{ once: true }}
+           className="group relative h-full"
+        >
+          <div className="h-full bg-white/10 backdrop-blur-lg rounded-[2.5rem] overflow-hidden border border-white/20 shadow-2xl transition-all duration-500 hover:border-blue-500/50 hover:bg-white/15">
+            <div className="aspect-[16/9] relative overflow-hidden">
+               <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60" />
+            </div>
+            <div className="p-8">
+              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">{p.title}</h3>
+              {p.description && <p className="text-slate-300 text-sm line-clamp-2 mb-6 leading-relaxed">{p.description}</p>}
+              {p.link && (
+                <Link href={p.link} className="inline-flex items-center text-blue-400 font-bold text-sm gap-2 hover:text-blue-300 transition-all group/link">
+                  Learn More <FaArrowRight className="text-[10px] transition-transform group-hover/link:translate-x-1" />
+                </Link>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
 
 export default function Home() {
   const [role, setRole] = useState("STUDENT");
@@ -54,15 +117,15 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center overflow-hidden font-sans">
+    <div className="min-h-screen relative overflow-x-hidden font-sans">
       {/* Background with subtle overlay */}
       <div
-        className="absolute inset-0 z-0 bg-cover bg-center brightness-75 transition-all duration-1000"
+        className="fixed inset-0 z-0 bg-cover bg-center brightness-75 transition-all duration-1000"
         style={{ backgroundImage: "url('/college.jpeg')" }}
       />
-      <div className="absolute inset-0 z-0 bg-slate-900/40" />
+      <div className="fixed inset-0 z-0 bg-slate-900/40" />
 
-      <div className="container mx-auto px-6 relative z-10 flex flex-col lg:flex-row items-center justify-between gap-12">
+      <div className="container mx-auto px-6 relative z-10 min-h-screen flex flex-col lg:flex-row items-center justify-between gap-12 py-20 lg:py-0">
         {/* Left Section: Hero Text */}
         <motion.div
           className="text-white max-w-2xl"
@@ -212,6 +275,23 @@ export default function Home() {
         <button className="bg-white p-4 rounded-2xl shadow-2xl text-[#0f2a4a] hover:scale-110 active:scale-95 transition-all">
           <FaGlobe className="text-xl" />
         </button>
+      </div>
+
+      {/* Posters Section */}
+      <div className="container mx-auto px-6 relative z-10 py-20">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+          <div>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Latest Announcements</h2>
+            <p className="text-slate-300">Important notices and upcoming recruitment events.</p>
+          </div>
+          <div className="flex gap-2">
+            <div className="w-12 h-1 bg-blue-500 rounded-full" />
+            <div className="w-4 h-1 bg-blue-500/30 rounded-full" />
+            <div className="w-4 h-1 bg-blue-500/30 rounded-full" />
+          </div>
+        </div>
+
+        <PostersGrid />
       </div>
 
       {/* Decorative Circles */}

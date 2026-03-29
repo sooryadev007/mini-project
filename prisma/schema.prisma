@@ -48,6 +48,8 @@ model Student {
   cgpa        Float
   resume      String?
   skills      String[]
+  isVerified  Boolean  @default(false)
+  verificationOtp String?
   applications Application[]
 
   @@map("student")
@@ -103,6 +105,11 @@ model Job {
   deadline    DateTime
   isActive    Boolean  @default(true)
   minCgpa     Float    @default(0.0)
+  probation   String?
+  trainingPeriod String?
+  jobOpportunity String?
+  jobDescription String?  // Link/URL to JD document
+  customForm  Json?    // Array of form fields e.g., [{ id: "f1", type: "text", label: "Github Link", required: true }]
   applications Application[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -125,6 +132,9 @@ model Application {
   job        Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
   status     ApplicationStatus @default(PENDING)
   resume     String?          // Link to the CV for this specific application
+  answers    Json?            // Answers submitted for the job's customForm
+  isException Boolean @default(false)
+  exceptionReason String?
   appliedAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
 
@@ -187,4 +197,17 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model Poster {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String
+  link        String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("poster")
 }

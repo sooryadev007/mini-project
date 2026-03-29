@@ -32,14 +32,18 @@
     "dotenv": "^17.2.3",
     "framer-motion": "^12.27.0",
     "jose": "^6.1.3",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.562.0",
     "next": "16.1.3",
+    "nodemailer": "^8.0.4",
     "pg": "^8.17.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hot-toast": "^2.6.0",
     "react-icons": "^5.5.0",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

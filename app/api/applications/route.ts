@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { jobId } = await req.json();
+    const { jobId, answers, isException, exceptionReason } = await req.json();
     if (!jobId) return NextResponse.json({ error: "Job ID required" }, { status: 400 });
 
     const student = await prisma.student.findUnique({
@@ -19,12 +19,20 @@ export async function POST(req: Request) {
     });
 
     if (!student) return NextResponse.json({ error: "Student profile not found" }, { status: 404 });
+    if (!student.isVerified) {
+      return NextResponse.json({ error: "Please verify your account first" }, { status: 400 });
+    }
 
     const job = await prisma.job.findUnique({ where: { id: jobId } });
     if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
     if (student.cgpa < job.minCgpa) {
-      return NextResponse.json({ error: `Minimum CGPA required is ${job.minCgpa}` }, { status: 400 });
+      if (!isException) {
+        return NextResponse.json({ error: `Minimum CGPA required is ${job.minCgpa}` }, { status: 400 });
+      }
+      if (!exceptionReason) {
+        return NextResponse.json({ error: "Exception reason is mandatory" }, { status: 400 });
+      }
     }
 
     const existingApplication = await prisma.application.findUnique({
@@ -39,6 +47,9 @@ export async function POST(req: Request) {
       data: {
         studentId: student.id,
         jobId,
+        answers: answers || null,
+        isException: !!isException,
+        exceptionReason: exceptionReason || null,
       },
     });
 

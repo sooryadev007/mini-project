@@ -68,6 +68,13 @@ export async function POST(req: Request) {
     } else {
       const { name, email, password, rollNumber, department, year, cgpa } = body;
       const normalizedEmail = email.toLowerCase().trim();
+
+      // Pre-check for duplicate email
+      const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      if (existing) {
+        return NextResponse.json({ error: `A student with email "${normalizedEmail}" already exists.` }, { status: 400 });
+      }
+
       const hashedPassword = await bcrypt.hash(password || "password123", 10);
       
       const user = await prisma.user.create({

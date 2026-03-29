@@ -9,8 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FaArrowLeft, FaUsers, FaPlus, FaUpload, FaBriefcase, FaSignOutAlt } from "react-icons/fa";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { FaArrowLeft, FaUsers, FaPlus, FaUpload, FaBriefcase, FaSignOutAlt, FaTrash, FaDownload, FaChevronUp, FaChevronDown, FaGripVertical, FaCopy } from "react-icons/fa";
 import { useRouter } from "next/navigation";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { cn } from "@/lib/utils";
 
 export default function PlacementOfficerPage() {
   const [students, setStudents] = useState<any[]>([]);
@@ -29,7 +34,22 @@ export default function PlacementOfficerPage() {
 
    // Form states
   const [newStudent, setNewStudent] = useState({ name: "", email: "", password: "", rollNumber: "", department: "", year: "1", cgpa: "0" });
-  const [newJob, setNewJob] = useState({ title: "", description: "", requirements: "", salary: "", location: "", jobType: "FULL_TIME", companyId: "", deadline: "", minCgpa: "0" });
+  const [newJob, setNewJob] = useState({ 
+    title: "", 
+    description: "", 
+    requirements: "", 
+    salary: "", 
+    location: "", 
+    jobType: "FULL_TIME", 
+    companyId: "", 
+    deadline: "", 
+    minCgpa: "0",
+    probation: "",
+    trainingPeriod: "",
+    jobOpportunity: "",
+    jobDescription: ""
+  });
+  const [customForm, setCustomForm] = useState<{ id: string; type: string; label: string; required: boolean; options: string }[]>([]);
   const [newCompany, setNewCompany] = useState({ name: "", description: "", website: "", industry: "", location: "" });
   const [csvFile, setCsvFile] = useState<File | null>(null);
 
@@ -125,12 +145,31 @@ export default function PlacementOfficerPage() {
     const res = await fetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newJob, requirements: newJob.requirements ? newJob.requirements.split(",").map(r => r.trim()) : [] }),
+      body: JSON.stringify({ 
+        ...newJob, 
+        requirements: newJob.requirements ? newJob.requirements.split(",").map(r => r.trim()) : [],
+        customForm: customForm.length > 0 ? customForm : null
+      }),
     });
     const data = await res.json();
     if (res.ok) {
       setIsAddJobOpen(false);
-      setNewJob({ title: "", description: "", requirements: "", salary: "", location: "", jobType: "FULL_TIME", companyId: "", deadline: "", minCgpa: "0" });
+      setNewJob({ 
+        title: "", 
+        description: "", 
+        requirements: "", 
+        salary: "", 
+        location: "", 
+        jobType: "FULL_TIME", 
+        companyId: "", 
+        deadline: "", 
+        minCgpa: "0",
+        probation: "",
+        trainingPeriod: "",
+        jobOpportunity: "",
+        jobDescription: ""
+      });
+      setCustomForm([]);
       fetchData();
     } else {
       setError(data.error || "Failed to create drive");
@@ -169,29 +208,57 @@ export default function PlacementOfficerPage() {
     }
   };
 
-  const handleExportCsv = () => {
-    if (!applicants.length) return;
-    const headers = ["Student Name", "Roll Number", "Department", "CGPA", "Applied On"];
+  const handleExportData = (format: "csv" | "xlsx" | "ods" | "html" | "tsv" | "pdf") => {
+    if (!applicants.length || !selectedJob) return;
     
-    let csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n"
-      + applicants.map(a => {
-          return [
-            `"${a.student.user.name}"`,
-            `"${a.student.rollNumber}"`,
-            `"${a.student.department}"`,
-            `"${a.student.cgpa}"`,
-            `"${new Date(a.appliedAt).toLocaleDateString()}"`
-          ].join(",");
-      }).join("\n");
+    const formKeys = selectedJob.customForm ? selectedJob.customForm.map((f: any) => f) : [];
+    
+    const rows = applicants.map(a => {
+      const baseObj: any = {
+        "Student Name": a.student.user.name,
+        "Roll Number": a.student.rollNumber,
+        "Department": a.student.department,
+        "CGPA": a.student.cgpa,
+        "Applied On": new Date(a.appliedAt).toLocaleDateString(),
+        "Eligibility Exception": a.isException ? "YES" : "NO",
+        "Exception Reason": a.exceptionReason || ""
+      };
+      
+      formKeys.forEach((f: any) => {
+         baseObj[f.label] = (a.answers && a.answers[f.id]) ? a.answers[f.id] : "";
+      });
+      return baseObj;
+    });
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `applicants-${selectedJob?.title.replace(/\s+/g, '-')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const headers = Object.keys(rows[0] || {});
+
+    if (format === "pdf") {
+      const doc = new jsPDF("landscape");
+      doc.text(`Applicants - ${selectedJob.title}`, 14, 15);
+      autoTable(doc, {
+        head: [headers],
+        body: rows.map(r => headers.map(h => r[h])),
+        startY: 20
+      });
+      doc.save(`applicants-${selectedJob.title.replace(/\s+/g, '-')}.pdf`);
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Applicants");
+
+    if (format === "csv") {
+      XLSX.writeFile(workbook, `applicants-${selectedJob.title.replace(/\s+/g, '-')}.csv`);
+    } else if (format === "tsv") {
+      XLSX.writeFile(workbook, `applicants-${selectedJob.title.replace(/\s+/g, '-')}.txt`, { bookType: "txt" });
+    } else if (format === "html") {
+      XLSX.writeFile(workbook, `applicants-${selectedJob.title.replace(/\s+/g, '-')}.html`);
+    } else if (format === "ods") {
+      XLSX.writeFile(workbook, `applicants-${selectedJob.title.replace(/\s+/g, '-')}.ods`);
+    } else {
+      XLSX.writeFile(workbook, `applicants-${selectedJob.title.replace(/\s+/g, '-')}.xlsx`);
+    }
   };
 
   return (
@@ -408,6 +475,190 @@ export default function PlacementOfficerPage() {
                           required 
                         />
                       </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>CTC / Stipend (Optional)</Label>
+                          <Input value={newJob.salary} onChange={e => setNewJob({...newJob, salary: e.target.value})} placeholder="e.g. 12 LPA / 50k pm" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Job Location (Optional)</Label>
+                          <Input value={newJob.location} onChange={e => setNewJob({...newJob, location: e.target.value})} placeholder="e.g. Bangalore / Remote" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Probation Period (Optional)</Label>
+                          <Input value={newJob.probation} onChange={e => setNewJob({...newJob, probation: e.target.value})} placeholder="e.g. 6 months" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Training Period (Optional)</Label>
+                          <Input value={newJob.trainingPeriod} onChange={e => setNewJob({...newJob, trainingPeriod: e.target.value})} placeholder="e.g. 3 months" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Job Opportunity Details (Optional)</Label>
+                        <Input value={newJob.jobOpportunity} onChange={e => setNewJob({...newJob, jobOpportunity: e.target.value})} placeholder="e.g. Full time offer after internship" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Job Description Link / Doc (Optional)</Label>
+                        <Input value={newJob.jobDescription} onChange={e => setNewJob({...newJob, jobDescription: e.target.value})} placeholder="Paste link to JD or brief details" />
+                      </div>
+
+                      <div className="space-y-4 border-t pt-4 mt-4">
+                        <div>
+                          <Label className="text-lg font-bold">Custom Registration Form (Optional)</Label>
+                          <p className="text-sm text-slate-500">Add dynamic fields for students to fill out when applying.</p>
+                        </div>
+                        {customForm.map((f, i) => (
+                          <div key={f.id} className="p-4 border border-slate-200 rounded-xl bg-white shadow-sm flex flex-col gap-4 relative group transition-all hover:border-emerald-300">
+                            <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-slate-400 hover:text-emerald-600" 
+                                onClick={() => {
+                                  if (i === 0) return;
+                                  const nf = [...customForm];
+                                  const temp = nf[i];
+                                  nf[i] = nf[i - 1];
+                                  nf[i - 1] = temp;
+                                  setCustomForm(nf);
+                                }}
+                                disabled={i === 0}
+                              >
+                                <FaChevronUp size={14} />
+                              </Button>
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-slate-400 hover:text-emerald-600" 
+                                onClick={() => {
+                                  if (i === customForm.length - 1) return;
+                                  const nf = [...customForm];
+                                  const temp = nf[i];
+                                  nf[i] = nf[i + 1];
+                                  nf[i + 1] = temp;
+                                  setCustomForm(nf);
+                                }}
+                                disabled={i === customForm.length - 1}
+                              >
+                                <FaChevronDown size={14} />
+                              </Button>
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-slate-400 hover:text-emerald-600" 
+                                title="Duplicate Question"
+                                onClick={() => {
+                                  const nf = [...customForm];
+                                  const dup = { ...nf[i], id: Math.random().toString(36).substr(2, 9) };
+                                  nf.splice(i + 1, 0, dup);
+                                  setCustomForm(nf);
+                                }}
+                              >
+                                <FaCopy size={13} />
+                              </Button>
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50" 
+                                title="Delete Question"
+                                onClick={() => setCustomForm(customForm.filter(x => x.id !== f.id))}
+                              >
+                                <FaTrash size={14} />
+                              </Button>
+                            </div>
+
+                            <div className="flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing">
+                                <FaGripVertical className="text-slate-300 mr-1" />
+                                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Question {i + 1}</span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-12">
+                              <div className="space-y-1.5 flex flex-col">
+                                <Label className="text-sm font-medium">Question Text</Label>
+                                <Input 
+                                  value={f.label} 
+                                  onChange={e => {
+                                    const nf = [...customForm];
+                                    nf[i].label = e.target.value;
+                                    setCustomForm(nf);
+                                  }} 
+                                  required 
+                                  placeholder="e.g. Do you have a valid passport?" 
+                                  className="h-10 text-sm bg-slate-50/50 focus:bg-white border-slate-200" 
+                                />
+                              </div>
+                              <div className="space-y-1.5 flex flex-col">
+                                <Label className="text-sm font-medium">Type of Answer</Label>
+                                <Select value={f.type} onValueChange={v => {
+                                  const nf = [...customForm];
+                                  nf[i].type = v;
+                                  setCustomForm(nf);
+                                }}>
+                                  <SelectTrigger className="h-10 text-sm bg-slate-50/50 focus:bg-white border-slate-200"><SelectValue/></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="text">Short Answer (Text)</SelectItem>
+                                    <SelectItem value="number">Number (CGPA, Year, etc.)</SelectItem>
+                                    <SelectItem value="dropdown">Selection Menu (Dropdown)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            
+                            {f.type === "dropdown" && (
+                              <div className="space-y-1.5 mt-1 animate-in fade-in slide-in-from-top-1 bg-emerald-50/30 p-3 rounded-lg border border-emerald-100/50">
+                                <Label className="text-sm font-medium text-emerald-800">Menu Options <span className="text-xs text-emerald-600 font-normal">(Separate with commas)</span></Label>
+                                <Input 
+                                  value={f.options} 
+                                  onChange={e => {
+                                    const nf = [...customForm];
+                                    nf[i].options = e.target.value;
+                                    setCustomForm(nf);
+                                  }} 
+                                  required 
+                                  placeholder="e.g. Yes, No, In Progress" 
+                                  className="h-10 text-sm bg-white border-emerald-200" 
+                                />
+                                <p className="text-[10px] text-emerald-600 italic">Students will pick from these choices.</p>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center space-x-2 mt-2 pt-2 border-t border-slate-100">
+                              <input 
+                                type="checkbox" 
+                                checked={f.required} 
+                                onChange={e => {
+                                  const nf = [...customForm];
+                                  nf[i].required = e.target.checked;
+                                  setCustomForm(nf);
+                                }} 
+                                id={`req-${f.id}`} 
+                                className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" 
+                              />
+                              <Label htmlFor={`req-${f.id}`} className="text-sm font-medium cursor-pointer text-slate-600">This field is mandatory for students</Label>
+                            </div>
+                          </div>
+                        ))}
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="w-full border-dashed border-2 py-8 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 transition-all flex flex-col gap-2 h-auto" 
+                          onClick={() => setCustomForm([...customForm, { id: Math.random().toString(36).substr(2, 9), type: "text", label: "", required: true, options: "" }])}
+                        >
+                          <FaPlus className="text-lg" />
+                          <span className="font-semibold">Add New Question</span>
+                        </Button>
+                      </div>
+
                     </CardContent>
                     <CardFooter>
                       <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700">Publish Drive</Button>
@@ -442,9 +693,21 @@ export default function PlacementOfficerPage() {
                               <DialogTitle>Applicants for {selectedJob?.title}</DialogTitle>
                               <DialogDescription>{selectedJob?.company?.name}</DialogDescription>
                             </div>
-                            <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={applicants.length === 0}>
-                              Download CSV
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" disabled={applicants.length === 0}>
+                                  <FaDownload className="mr-2" /> Export Data
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleExportData("xlsx")}>Export as Excel (.xlsx)</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleExportData("ods")}>Export as OpenDocument (.ods)</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleExportData("csv")}>Export as CSV (.csv)</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleExportData("tsv")}>Export as TSV (.tsv)</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleExportData("pdf")}>Export as PDF (.pdf)</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleExportData("html")}>Export as HTML (.html)</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </DialogHeader>
                         {loadingApplicants ? (
@@ -455,20 +718,41 @@ export default function PlacementOfficerPage() {
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                               <thead className="bg-slate-50 border-y">
+                                <tr>
                                   <th className="px-4 py-3 text-left font-medium">Student Name</th>
                                   <th className="px-4 py-3 text-left font-medium">Roll Number</th>
                                   <th className="px-4 py-3 text-left font-medium">Department</th>
                                   <th className="px-4 py-3 text-left font-medium">CGPA</th>
-                                  <th className="px-4 py-3 text-left font-medium">Applied On</th>
+                                   <th className="px-4 py-3 text-left font-medium">Applied On</th>
+                                  <th className="px-4 py-3 text-left font-medium">Exception?</th>
+                                  <th className="px-4 py-3 text-left font-medium">Reason</th>
+                                  {selectedJob?.customForm && selectedJob.customForm.map((f: any) => (
+                                    <th key={f.id} className="px-4 py-3 text-left font-medium">{f.label}</th>
+                                  ))}
+                                </tr>
                               </thead>
                               <tbody className="divide-y">
                                 {applicants.map(a => (
-                                  <tr key={a.id}>
-                                    <td className="px-4 py-3 font-semibold">{a.student.user.name}</td>
+                                  <tr key={a.id} className={cn("hover:bg-slate-50", a.isException && "bg-yellow-100/50 hover:bg-yellow-100")}>
+                                    <td className="px-4 py-3 font-semibold flex items-center gap-2">
+                                      {a.student.user.name}
+                                      {a.isException && <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded border border-amber-200 uppercase font-black">Exception</span>}
+                                    </td>
                                     <td className="px-4 py-3">{a.student.rollNumber}</td>
                                     <td className="px-4 py-3">{a.student.department}</td>
                                     <td className="px-4 py-3 text-emerald-600 font-bold">{a.student.cgpa}</td>
                                     <td className="px-4 py-3 text-slate-400">{new Date(a.appliedAt).toLocaleDateString()}</td>
+                                    <td className="px-4 py-3">
+                                      {a.isException ? <span className="text-amber-600 font-bold">YES</span> : "NO"}
+                                    </td>
+                                    <td className="px-4 py-3 text-xs max-w-[150px] truncate" title={a.exceptionReason}>
+                                      {a.exceptionReason || "-"}
+                                    </td>
+                                    {selectedJob?.customForm && selectedJob.customForm.map((f: any) => (
+                                      <td key={f.id} className="px-4 py-3 text-slate-600">
+                                        {a.answers && a.answers[f.id] ? a.answers[f.id] : "-"}
+                                      </td>
+                                    ))}
                                   </tr>
                                 ))}
                               </tbody>

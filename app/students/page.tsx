@@ -18,6 +18,21 @@ export default function StudentPage() {
   const [loading, setLoading] = useState(true);
   const [applyingId, setApplyingId] = useState<string | null>(null);
   
+  // Custom Form states
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({});
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  
+  // Verification states
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [sendLoading, setSendLoading] = useState(false);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+
+  // Exception states
+  const [isException, setIsException] = useState(false);
+  const [exceptionReason, setExceptionReason] = useState("");
+  
   // New States
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const [passForm, setPassForm] = useState({ currentPassword: "", newPassword: "" });
@@ -44,17 +59,26 @@ export default function StudentPage() {
     fetchData();
   }, []);
 
-  const handleApply = async (jobId: string) => {
+  const handleApplyTrigger = (job: any) => {
+    setSelectedJob(job);
+    setCustomAnswers({});
+    setIsException(false);
+    setExceptionReason("");
+    setIsApplyModalOpen(true);
+  };
+
+  const handleApply = async (jobId: string, answers: Record<string, string> = {}) => {
     setApplyingId(jobId);
     try {
       const res = await fetch("/api/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId }),
+        body: JSON.stringify({ jobId, answers, isException, exceptionReason }),
       });
       const data = await res.json();
       if (res.ok) {
         alert("Applied successfully!");
+        setIsApplyModalOpen(false);
         fetchData();
       } else {
         alert(data.error || "Failed to apply");
@@ -84,6 +108,42 @@ export default function StudentPage() {
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/sign-in");
+  };
+
+  const handleSendOtp = async () => {
+    setSendLoading(true);
+    try {
+      const res = await fetch("/api/students/verify/send-otp", { method: "POST" });
+      if (res.ok) {
+        alert("OTP sent to your email (Check server console)");
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to send OTP");
+      }
+    } finally {
+      setSendLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setVerifyLoading(true);
+    try {
+      const res = await fetch("/api/students/verify/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otp: otpValue }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert("Verified successfully!");
+        setIsVerifyModalOpen(false);
+        fetchData();
+      } else {
+        alert(data.error || "Invalid OTP");
+      }
+    } finally {
+      setVerifyLoading(false);
+    }
   };
 
   const isApplied = (jobId: string) => applications.some(a => a.jobId === jobId);
@@ -127,6 +187,19 @@ export default function StudentPage() {
                 </form>
               </DialogContent>
             </Dialog>
+            {!user?.studentProfile?.isVerified && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                onClick={() => {
+                  setIsVerifyModalOpen(true);
+                  handleSendOtp();
+                }}
+              >
+                Verify Account
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <FaSignOutAlt className="mr-2" /> Sign Out
             </Button>
@@ -151,7 +224,14 @@ export default function StudentPage() {
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Major</p>
                   <p className="text-lg font-semibold text-slate-700">{user.studentProfile.department}</p>
                 </div>
-
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</p>
+                  {user.studentProfile.isVerified ? (
+                    <p className="text-sm font-bold text-emerald-600 flex items-center gap-1"><FaCheckCircle className="text-xs" /> Verified</p>
+                  ) : (
+                    <p className="text-sm font-bold text-amber-600 flex items-center gap-1"><FaExclamationCircle className="text-xs" /> Unverified</p>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -174,7 +254,7 @@ export default function StudentPage() {
                     return (
                       <Card key={j.id} className={cn(
                         "overflow-hidden border-none shadow-lg hover:shadow-xl transition-all bg-white/50 backdrop-blur-md",
-                        !eligible && "grayscale opacity-75 pointer-events-none"
+                        !eligible && "opacity-90"
                       )}>
                         <CardHeader className="bg-white/80 border-b border-slate-100">
                           <div className="flex justify-between items-start">
@@ -195,6 +275,48 @@ export default function StudentPage() {
                               <span key={i} className="px-3 py-1 bg-slate-100 rounded-full text-xs text-slate-600">{r}</span>
                             ))}
                           </div>
+
+                          {(j.salary || j.location || j.probation || j.trainingPeriod || j.jobOpportunity) && (
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6 mb-6 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                              {j.salary && (
+                                <div>
+                                  <p className="text-[10px] text-blue-500 uppercase font-bold tracking-wider">CTC / Stipend</p>
+                                  <p className="text-sm font-semibold text-slate-700">{j.salary}</p>
+                                </div>
+                              )}
+                              {j.location && (
+                                <div>
+                                  <p className="text-[10px] text-blue-500 uppercase font-bold tracking-wider">Location</p>
+                                  <p className="text-sm font-semibold text-slate-700">{j.location}</p>
+                                </div>
+                              )}
+                              {j.probation && (
+                                <div>
+                                  <p className="text-[10px] text-blue-500 uppercase font-bold tracking-wider">Probation</p>
+                                  <p className="text-sm font-semibold text-slate-700">{j.probation}</p>
+                                </div>
+                              )}
+                              {j.trainingPeriod && (
+                                <div>
+                                  <p className="text-[10px] text-blue-500 uppercase font-bold tracking-wider">Training Period</p>
+                                  <p className="text-sm font-semibold text-slate-700">{j.trainingPeriod}</p>
+                                </div>
+                              )}
+                              {j.jobOpportunity && (
+                                <div className="col-span-2 md:col-span-1">
+                                  <p className="text-[10px] text-blue-500 uppercase font-bold tracking-wider">Opportunity</p>
+                                  <p className="text-sm font-semibold text-slate-700 line-clamp-2" title={j.jobOpportunity}>{j.jobOpportunity}</p>
+                                </div>
+                              )}
+                              {j.jobDescription && (
+                                <div className="col-span-full pt-2 border-t border-blue-200/50">
+                                  <a href={j.jobDescription.startsWith('http') ? j.jobDescription : `https://${j.jobDescription}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-700 flex items-center gap-1 hover:underline">
+                                    <FaBriefcase className="text-[10px]" /> View Detailed Job Description
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          )}
                           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                             <div className="flex items-center gap-2 text-sm">
                               <span className="text-slate-500">Criteria:</span>
@@ -205,11 +327,11 @@ export default function StudentPage() {
                               )}
                             </div>
                             <Button 
-                              disabled={!eligible || applied || applyingId === j.id}
-                              onClick={() => handleApply(j.id)}
+                              disabled={applied || applyingId === j.id || !user?.studentProfile?.isVerified}
+                              onClick={() => handleApplyTrigger(j)}
                               className={applied ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : "bg-blue-600 hover:bg-blue-700"}
                             >
-                              {applied ? "Applied" : applyingId === j.id ? "Processing..." : "Apply Now"}
+                              {!user?.studentProfile?.isVerified ? "Verify to Apply" : applied ? "Applied" : applyingId === j.id ? "Processing..." : "Apply Now"}
                             </Button>
                           </div>
                         </CardContent>
@@ -218,8 +340,6 @@ export default function StudentPage() {
                   })}
                 </div>
               )}
-
-
             </div>
 
             <div className="space-y-6">
@@ -244,6 +364,117 @@ export default function StudentPage() {
               </div>
             </div>
           </div>
+
+          <Dialog open={isApplyModalOpen} onOpenChange={setIsApplyModalOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Apply for {selectedJob?.title}</DialogTitle>
+                <DialogDescription>
+                  {user?.studentProfile?.cgpa < selectedJob?.minCgpa && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs mb-4">
+                      <strong>Note:</strong> You do not meet the minimum CGPA ({selectedJob?.minCgpa}) for this drive. 
+                      You must provide a valid reason to apply with an exception.
+                    </div>
+                  )}
+                  Please fill out the following required information.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                handleApply(selectedJob.id, customAnswers);
+              }} className="space-y-4">
+                {user?.studentProfile?.cgpa < selectedJob?.minCgpa && (
+                  <div className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="flex items-center space-x-2">
+                       <input 
+                         type="checkbox" 
+                         id="exception" 
+                         checked={isException} 
+                         onChange={e => setIsException(e.target.checked)}
+                         className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
+                       />
+                       <Label htmlFor="exception" className="text-sm font-bold text-slate-700">I&apos;ll acquired eligibility shortly(option)</Label>
+                    </div>
+                    {isException && (
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-500">Please provide a detailed reason/plan *</Label>
+                        <textarea 
+                          required
+                          value={exceptionReason}
+                          onChange={e => setExceptionReason(e.target.value)}
+                          className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          placeholder="Example: I have minor in X which will improve my CGPA..."
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+                {selectedJob?.customForm?.map((f: any) => (
+                  <div key={f.id} className="space-y-2">
+                    <Label>{f.label} {f.required && <span className="text-red-500">*</span>}</Label>
+                    {f.type === "dropdown" ? (
+                      <select 
+                        required={f.required}
+                        className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        value={customAnswers[f.id] || ""}
+                        onChange={e => setCustomAnswers({...customAnswers, [f.id]: e.target.value})}
+                      >
+                        <option value="" disabled>Select an option</option>
+                        {f.options?.split(",").map((opt: string, i: number) => (
+                          <option key={i} value={opt.trim()}>{opt.trim()}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <Input
+                        type={f.type === "number" ? "number" : "text"}
+                        required={f.required}
+                        value={customAnswers[f.id] || ""}
+                        onChange={e => setCustomAnswers({...customAnswers, [f.id]: e.target.value})}
+                      />
+                    )}
+                  </div>
+                ))}
+                <DialogFooter className="mt-6 gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsApplyModalOpen(false)}>Cancel</Button>
+                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={applyingId === selectedJob?.id || (user?.studentProfile?.cgpa < selectedJob?.minCgpa && !isException)}>
+                    {applyingId === selectedJob?.id ? "Submitting..." : "Submit Application"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isVerifyModalOpen} onOpenChange={setIsVerifyModalOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Verify Your Account</DialogTitle>
+                <DialogDescription>We sent a 6-digit OTP to your registered email (Mocked in server console).</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Verification OTP</Label>
+                  <Input 
+                    placeholder="Enter 6-digit OTP" 
+                    value={otpValue} 
+                    onChange={e => setOtpValue(e.target.value)}
+                    maxLength={6}
+                  />
+                </div>
+                <div className="flex justify-between items-center">
+                  <Button variant="link" size="sm" onClick={handleSendOtp} disabled={sendLoading} className="text-blue-600 p-0 h-auto">
+                    {sendLoading ? "Sending..." : "Resend OTP"}
+                  </Button>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsVerifyModalOpen(false)}>Cancel</Button>
+                <Button onClick={handleVerifyOtp} disabled={verifyLoading || otpValue.length < 6} className="bg-blue-600">
+                  {verifyLoading ? "Verifying..." : "Confirm Verification"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
         </div>
       </main>
     </div>
