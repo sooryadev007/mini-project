@@ -35,7 +35,7 @@ export async function GET(
     });
 
     // shape the response a bit for UI convenience
-    const shaped = applications.map((a) => ({
+    const shaped = applications.map((a: any) => ({
       id: a.id,
       status: a.status,
       appliedAt: a.appliedAt,
