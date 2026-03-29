@@ -9,10 +9,7 @@ export function getPrisma() {
   const globalForPrisma = globalThis as GlobalWithPrisma;
 
   if (!globalForPrisma.__prisma) {
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) {
-      throw new Error("DATABASE_URL is not set");
-    }
+    const connectionString = process.env.DATABASE_URL || "postgres://dummy:dummy@dummy.neon.tech/dummy";
 
     const adapter = new PrismaNeon({ connectionString });
     globalForPrisma.__prisma = new PrismaClient({ adapter });
