@@ -58,7 +58,7 @@ export default function SignInPage() {
         <Link href="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-blue-600 mb-6 transition-colors">
           <FaArrowLeft /> Back to Home
         </Link>
-        
+
         <Card className="shadow-xl border-slate-200">
           <CardHeader className="space-y-1">
             <div className="flex justify-center mb-4">
@@ -120,7 +120,7 @@ export default function SignInPage() {
               <p className="text-center text-sm text-slate-600">
                 Don't have an account?{" "}
                 <Link href="/sign-up" className="text-blue-600 hover:underline font-medium">
-                  Sign Up
+                  "Sign Up"
                 </Link>
               </p>
             </CardFooter>
